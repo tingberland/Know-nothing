@@ -1,3 +1,12 @@
+import type { CSSProperties } from "react";
+
+export type FontAsset = { name: string; url: string; format: "woff" | "woff2" };
+export type SocialLink = {
+  platform: "instagram" | "youtube" | "tiktok" | "facebook" | "x" | "linkedin" | "other";
+  label: string;
+  href: string;
+  placement: "header" | "footer" | "both";
+};
 export type CoreSectionId = "hero" | "manifesto" | "archive";
 export type CustomSection = {
   id: string;
@@ -14,8 +23,10 @@ export type SiteDesign = {
     coral: string;
     acid: string;
     blue: string;
-    headingFont: "editorial" | "modern" | "humanist";
-    bodyFont: "sans" | "serif";
+    headingFont: "editorial" | "modern" | "humanist" | "custom";
+    bodyFont: "sans" | "serif" | "custom";
+    headingFontAsset: FontAsset | null;
+    bodyFontAsset: FontAsset | null;
     density: "airy" | "balanced" | "compact";
     corners: "sharp" | "soft";
   };
@@ -58,14 +69,14 @@ export type SiteSettings = {
   socialImageMediaId: number | null;
   analytics: string;
   navigation: Array<{ label: string; href: string }>;
-  socialLinks: Array<{ label: string; href: string }>;
+  socialLinks: SocialLink[];
   design: SiteDesign;
 };
 
 export const defaultSiteDesign: SiteDesign = {
   theme: {
     paper: "#f4f0e7", ink: "#14213d", coral: "#f06f5f", acid: "#d9ff4f", blue: "#6c77e8",
-    headingFont: "editorial", bodyFont: "sans", density: "airy", corners: "sharp",
+    headingFont: "editorial", bodyFont: "sans", headingFontAsset: null, bodyFontAsset: null, density: "airy", corners: "sharp",
   },
   sectionOrder: ["hero", "manifesto", "archive"],
   visibility: { hero: true, manifesto: true, archive: true },
@@ -105,6 +116,13 @@ const text = (value: unknown, fallback: string, max = 1200) => {
 const hex = (value: unknown, fallback: string) => /^#[0-9a-f]{6}$/i.test(String(value)) ? String(value) : fallback;
 const id = (value: unknown) => { const n = Number(value); return Number.isInteger(n) && n > 0 ? n : null; };
 const choice = <T extends string>(value: unknown, options: readonly T[], fallback: T) => options.includes(value as T) ? value as T : fallback;
+const externalUrl = (value: unknown) => { try { const url = new URL(String(value)); return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : ""; } catch { return ""; } };
+const fontAsset = (value: unknown): FontAsset | null => {
+  if (!value || typeof value !== "object") return null; const raw = value as Record<string, unknown>;
+  const url = String(raw.url ?? ""); if (!/^\/media\/[a-zA-Z0-9._%~-]+$/.test(url)) return null;
+  const format = choice(raw.format, ["woff", "woff2"] as const, url.toLowerCase().endsWith(".woff2") ? "woff2" : "woff");
+  return { name: text(raw.name, "Custom brand font", 120), url, format };
+};
 
 export function normalizeSiteSettings(value: unknown): SiteSettings {
   const raw = value && typeof value === "object" ? value as Record<string, unknown> : {};
@@ -135,13 +153,18 @@ export function normalizeSiteSettings(value: unknown): SiteSettings {
     footer: text(raw.footer, defaultSite.footer, 200), logoMediaId: id(raw.logoMediaId), faviconMediaId: id(raw.faviconMediaId),
     socialImageMediaId: id(raw.socialImageMediaId), analytics: text(raw.analytics, "", 500),
     navigation: Array.isArray(raw.navigation) ? raw.navigation.slice(0, 8).map((link, index) => { const item = link && typeof link === "object" ? link as Record<string, unknown> : {}; return { label: text(item.label, `Link ${index + 1}`, 50), href: text(item.href, "/", 300) }; }) : defaultSite.navigation,
-    socialLinks: Array.isArray(raw.socialLinks) ? raw.socialLinks.slice(0, 8).map((link, index) => { const item = link && typeof link === "object" ? link as Record<string, unknown> : {}; return { label: text(item.label, `Social ${index + 1}`, 50), href: text(item.href, "#", 300) }; }) : [],
+    socialLinks: Array.isArray(raw.socialLinks) ? raw.socialLinks.slice(0, 12).map((link, index) => { const item = link && typeof link === "object" ? link as Record<string, unknown> : {}; return {
+      platform: choice(item.platform, ["instagram","youtube","tiktok","facebook","x","linkedin","other"] as const, "other"),
+      label: text(item.label, `Social ${index + 1}`, 50), href: externalUrl(item.href), placement: choice(item.placement, ["header","footer","both"] as const, "footer"),
+    }; }).filter(link=>Boolean(link.href)) : [],
     design: {
       theme: {
         paper: hex(themeRaw.paper, defaultSiteDesign.theme.paper), ink: hex(themeRaw.ink, defaultSiteDesign.theme.ink),
         coral: hex(themeRaw.coral, defaultSiteDesign.theme.coral), acid: hex(themeRaw.acid, defaultSiteDesign.theme.acid), blue: hex(themeRaw.blue, defaultSiteDesign.theme.blue),
-        headingFont: choice(themeRaw.headingFont, ["editorial", "modern", "humanist"] as const, "editorial"),
-        bodyFont: choice(themeRaw.bodyFont, ["sans", "serif"] as const, "sans"), density: choice(themeRaw.density, ["airy", "balanced", "compact"] as const, "airy"),
+        headingFont: choice(themeRaw.headingFont, ["editorial", "modern", "humanist", "custom"] as const, "editorial"),
+        bodyFont: choice(themeRaw.bodyFont, ["sans", "serif", "custom"] as const, "sans"),
+        headingFontAsset: fontAsset(themeRaw.headingFontAsset), bodyFontAsset: fontAsset(themeRaw.bodyFontAsset),
+        density: choice(themeRaw.density, ["airy", "balanced", "compact"] as const, "airy"),
         corners: choice(themeRaw.corners, ["sharp", "soft"] as const, "sharp"),
       },
       sectionOrder, visibility: { hero: visibilityRaw.hero !== false, manifesto: visibilityRaw.manifesto !== false, archive: visibilityRaw.archive !== false },
@@ -172,10 +195,16 @@ export function siteThemeStyle(settings: SiteSettings) {
   return {
     "--paper": settings.design.theme.paper, "--ink": settings.design.theme.ink, "--coral": settings.design.theme.coral,
     "--acid": settings.design.theme.acid, "--blue": settings.design.theme.blue,
-    "--font-heading": fonts[settings.design.theme.headingFont],
-    "--font-body": settings.design.theme.bodyFont === "serif" ? 'Georgia, "Times New Roman", serif' : 'Arial, Helvetica, sans-serif',
+    "--font-heading": settings.design.theme.headingFont === "custom" && settings.design.theme.headingFontAsset ? '"KND Custom Heading", Georgia, serif' : fonts[settings.design.theme.headingFont as keyof typeof fonts] ?? fonts.editorial,
+    "--font-body": settings.design.theme.bodyFont === "custom" && settings.design.theme.bodyFontAsset ? '"KND Custom Body", Arial, sans-serif' : settings.design.theme.bodyFont === "serif" ? 'Georgia, "Times New Roman", serif' : 'Arial, Helvetica, sans-serif',
     "--section-space": settings.design.theme.density === "compact" ? "70px" : settings.design.theme.density === "balanced" ? "90px" : "110px",
     "--corner": settings.design.theme.corners === "soft" ? "18px" : "0px",
   } as CSSProperties;
 }
-import type { CSSProperties } from "react";
+
+export function siteFontFaceCss(settings: SiteSettings) {
+  const heading=settings.design.theme.headingFontAsset;const body=settings.design.theme.bodyFontAsset;const rules:string[]=[];
+  if(heading)rules.push(`@font-face{font-family:"KND Custom Heading";src:url("${heading.url}") format("${heading.format}");font-display:swap;}`);
+  if(body)rules.push(`@font-face{font-family:"KND Custom Body";src:url("${body.url}") format("${body.format}");font-display:swap;}`);
+  return rules.join("");
+}

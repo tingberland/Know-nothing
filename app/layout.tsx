@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getSettings } from "@/lib/database";
-import { normalizeSiteSettings, siteThemeStyle } from "@/lib/site-settings";
+import { normalizeSiteSettings, siteFontFaceCss, siteThemeStyle } from "@/lib/site-settings";
 import "./globals.css";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +32,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const site = normalizeSiteSettings(settings.site);
   return (
     <html lang="th">
+      <head><style>{siteFontFaceCss(site)}</style></head>
       <body style={siteThemeStyle(site)} data-heading-font={site.design.theme.headingFont} data-body-font={site.design.theme.bodyFont} data-corners={site.design.theme.corners}>{children}</body>
     </html>
   );

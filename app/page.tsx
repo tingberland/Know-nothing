@@ -1,5 +1,5 @@
 import { ContentList } from "@/components/content-list";
-import { PublicFooter } from "@/components/public-header";
+import { PublicFooter, PublicHeader } from "@/components/public-header";
 import { getSettings, listCategories, listContent } from "@/lib/database";
 import { normalizeSiteSettings, siteThemeStyle, type CustomSection, type SiteSettings } from "@/lib/site-settings";
 
@@ -10,7 +10,7 @@ export default async function Home(){
   const [items,categories]=await Promise.all([listContent({publishedOnly:true,limit:site.design.archive.limit}),listCategories()]);
   const customByKey=new Map(site.design.customSections.map(section=>[`custom:${section.id}`,section]));
   return <main id="top" className={`home-site archive-${site.design.archive.layout}`} style={siteThemeStyle(site)}>
-    <header className="site-header page-shell"><a className="wordmark" href="#top"><span aria-hidden="true">✦</span> {site.name}</a><nav aria-label="Main navigation">{site.navigation.map(link=><a href={link.href} key={`${link.label}-${link.href}`}>{link.label}</a>)}<a href="/search">ค้นหา</a><a className="nav-pill" href="/admin">Admin ↗</a></nav></header>
+    <PublicHeader site={site}/>
     {site.design.sectionOrder.map(key=>{
       if(key==="hero"&&site.design.visibility.hero)return <Hero site={site} itemCount={items.length} categoryCount={categories.length} key={key}/>;
       if(key==="manifesto"&&site.design.visibility.manifesto)return <Manifesto site={site} key={key}/>;
