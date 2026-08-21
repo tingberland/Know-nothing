@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
+import { getSettings } from "@/lib/database";
+import { normalizeSiteSettings, siteThemeStyle } from "@/lib/site-settings";
 import "./globals.css";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL ?? "https://know-nothing-daily.tingting581190.chatgpt.site"),
@@ -23,10 +27,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const settings = await getSettings();
+  const site = normalizeSiteSettings(settings.site);
   return (
     <html lang="th">
-      <body>{children}</body>
+      <body style={siteThemeStyle(site)} data-heading-font={site.design.theme.headingFont} data-body-font={site.design.theme.bodyFont} data-corners={site.design.theme.corners}>{children}</body>
     </html>
   );
 }
