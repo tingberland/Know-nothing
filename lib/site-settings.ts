@@ -117,6 +117,7 @@ const hex = (value: unknown, fallback: string) => /^#[0-9a-f]{6}$/i.test(String(
 const id = (value: unknown) => { const n = Number(value); return Number.isInteger(n) && n > 0 ? n : null; };
 const choice = <T extends string>(value: unknown, options: readonly T[], fallback: T) => options.includes(value as T) ? value as T : fallback;
 const externalUrl = (value: unknown) => { try { const url = new URL(String(value)); return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : ""; } catch { return ""; } };
+const navigationHref = (value: unknown) => { const href=String(value??"").trim().slice(0,300);if(!href)return "/";if(href.startsWith("/#")||href.startsWith("/"))return href;if(href.startsWith("#"))return `/${href}`;const external=externalUrl(href);return external||`/${href.replace(/^\/+/,"")}`; };
 const fontAsset = (value: unknown): FontAsset | null => {
   if (!value || typeof value !== "object") return null; const raw = value as Record<string, unknown>;
   const url = String(raw.url ?? ""); if (!/^\/media\/[a-zA-Z0-9._%~-]+$/.test(url)) return null;
@@ -152,7 +153,7 @@ export function normalizeSiteSettings(value: unknown): SiteSettings {
     name: text(raw.name, defaultSite.name, 100), description: text(raw.description, defaultSite.description, 300),
     footer: text(raw.footer, defaultSite.footer, 200), logoMediaId: id(raw.logoMediaId), faviconMediaId: id(raw.faviconMediaId),
     socialImageMediaId: id(raw.socialImageMediaId), analytics: text(raw.analytics, "", 500),
-    navigation: Array.isArray(raw.navigation) ? raw.navigation.slice(0, 8).map((link, index) => { const item = link && typeof link === "object" ? link as Record<string, unknown> : {}; return { label: text(item.label, `Link ${index + 1}`, 50), href: text(item.href, "/", 300) }; }) : defaultSite.navigation,
+    navigation: Array.isArray(raw.navigation) ? raw.navigation.slice(0, 8).map((link, index) => { const item = link && typeof link === "object" ? link as Record<string, unknown> : {}; return { label: text(item.label, `Link ${index + 1}`, 50), href: navigationHref(item.href) }; }) : defaultSite.navigation,
     socialLinks: Array.isArray(raw.socialLinks) ? raw.socialLinks.slice(0, 12).map((link, index) => { const item = link && typeof link === "object" ? link as Record<string, unknown> : {}; return {
       platform: choice(item.platform, ["instagram","youtube","tiktok","facebook","x","linkedin","other"] as const, "other"),
       label: text(item.label, `Social ${index + 1}`, 50), href: externalUrl(item.href), placement: choice(item.placement, ["header","footer","both"] as const, "footer"),

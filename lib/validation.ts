@@ -1,7 +1,7 @@
 import type { ContentInput, ContentType, PublicationStatus } from "./types";
 const allowedTypes = new Set<ContentType>(["article", "note", "film", "place"]);
 const allowedStatuses = new Set<PublicationStatus>(["draft", "published"]);
-export function slugify(value: string) { return value.trim().toLowerCase().normalize("NFKD").replace(/[^a-z0-9\u0E00-\u0E7F]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 120); }
+export function slugify(value: string) { return value.trim().toLowerCase().normalize("NFKC").replace(/[^\p{L}\p{N}\p{M}]+/gu, "-").replace(/^-+|-+$/g, "").slice(0, 120); }
 export function sanitizePlain(value: unknown, max = 5000) { return String(value ?? "").replace(/[<>]/g, "").trim().slice(0, max); }
 export function sanitizeHtml(value: unknown) {
   let html = String(value ?? "").slice(0, 250_000);
