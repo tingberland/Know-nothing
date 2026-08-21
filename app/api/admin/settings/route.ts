@@ -1,0 +1,5 @@
+import { getSettings, saveSetting } from "@/lib/database";
+import { requireApiUser } from "@/lib/auth";
+import { sanitizePlain } from "@/lib/validation";
+export async function GET(request:Request){const auth=await requireApiUser(request);if("response"in auth)return auth.response;return Response.json({settings:await getSettings()})}
+export async function PUT(request:Request){const auth=await requireApiUser(request);if("response"in auth)return auth.response;if(auth.user.role!=="admin")return Response.json({error:"Admin role required."},{status:403});const p=await request.json() as Record<string,unknown>;const site={name:sanitizePlain(p.name,100),description:sanitizePlain(p.description,300),footer:sanitizePlain(p.footer,200),logoMediaId:Number(p.logoMediaId)||null,faviconMediaId:Number(p.faviconMediaId)||null,socialImageMediaId:Number(p.socialImageMediaId)||null,analytics:sanitizePlain(p.analytics,500),socialLinks:Array.isArray(p.socialLinks)?p.socialLinks.slice(0,20):[],navigation:Array.isArray(p.navigation)?p.navigation.slice(0,20):[]};await saveSetting("site",site,auth.user.userId);return Response.json({settings:await getSettings()})}

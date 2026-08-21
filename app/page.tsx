@@ -1,0 +1,15 @@
+import { ContentList } from "@/components/content-list";
+import { PublicFooter } from "@/components/public-header";
+import { getSettings, listCategories, listContent } from "@/lib/database";
+export const dynamic="force-dynamic";
+export default async function Home(){
+  const [items,categories,settings]=await Promise.all([listContent({publishedOnly:true,limit:24}),listCategories(),getSettings()]);
+  const site=(settings.site??{}) as {name?:string;navigation?:Array<{label:string;href:string}>};
+  return <main id="top">
+    <header className="site-header page-shell"><a className="wordmark" href="#top"><span aria-hidden="true">✦</span> {site.name??"Know Nothing Daily"}</a><nav aria-label="Main navigation">{(site.navigation??[{label:"แนวคิด",href:"#manifesto"},{label:"คลังความรู้",href:"#archive"}]).map(link=><a href={link.href} key={link.href}>{link.label}</a>)}<a href="/search">ค้นหา</a><a className="nav-pill" href="/admin">Admin ↗</a></nav></header>
+    <section className="hero page-shell" aria-labelledby="hero-title"><div className="eyebrow">A PERSONAL ARCHIVE OF CURIOSITY · EST. 2026</div><div className="hero-grid"><div><h1 id="hero-title">รู้จักโลก <span>เพิ่มขึ้น</span> ทุกวัน</h1><p className="hero-deck">เปลี่ยนความสงสัยเล็ก ๆ ให้กลายเป็นบันทึกที่ค้นเจอได้เสมอ—หนึ่งคำถาม หนึ่งการค้นพบ ในแต่ละวัน</p></div><aside className="prompt-note" aria-label="Today’s prompt"><div className="prompt-top"><span>TODAY’S PROMPT</span><span>วันนี้</span></div><p>มีเรื่องอะไรที่คุณเคยเห็นผ่านตา แต่ยังไม่เคยหยุดถามว่า “ทำไม?”</p><a href="#archive">เริ่มจากคลังความรู้ ↓</a></aside></div><div className="hero-footer"><a className="explore-link" href="#archive"><span>↓</span> EXPLORE THE ARCHIVE</a><dl className="stats" aria-label="Archive statistics"><div><dt>DISCOVERIES</dt><dd>{String(items.length).padStart(2,"0")}</dd></div><div><dt>CATEGORIES</dt><dd>{String(categories.length).padStart(2,"0")}</dd></div><div><dt>STARTED</dt><dd>AUG ’26</dd></div></dl></div></section>
+    <section className="manifesto" id="manifesto"><div className="page-shell manifesto-grid"><div className="section-mark">01 / THE PHILOSOPHY</div><h2>Curiosity makes<br/>the world <em>wider.</em></h2><div className="manifesto-copy"><p>ความรู้ไม่จำเป็นต้องยิ่งใหญ่ แค่ทำให้โลกของเรากว้างขึ้นวันละนิดก็พอ</p><p>ที่นี่ไม่ใช่สารานุกรม แต่เป็นร่องรอยของคำถาม ความบังเอิญ และช่วงเวลาที่ทำให้เราเข้าใจบางอย่างมากขึ้น</p></div></div></section>
+    <section className="archive page-shell" id="archive"><div className="archive-heading"><div><div className="section-mark">02 / THE ARCHIVE</div><h2>Latest discoveries.</h2></div><form className="search-field" action="/search"><span aria-hidden="true">⌕</span><label className="sr-only" htmlFor="home-search">ค้นหาบันทึก</label><input id="home-search" name="q" type="search" placeholder="ค้นหาสิ่งที่เคยสงสัย..."/></form></div><div className="filters" aria-label="Browse by category"><a className="active" href="#archive">ทั้งหมด</a>{categories.map(category=><a href={`/category/${category.slug}`} key={category.id}>{category.name}</a>)}</div><ContentList items={items}/></section>
+    <PublicFooter/>
+  </main>
+}

@@ -1,0 +1,6 @@
+import { deleteTaxonomy, listCategories, saveTaxonomy } from "@/lib/database";
+import { requireApiUser } from "@/lib/auth";
+import { sanitizePlain, slugify } from "@/lib/validation";
+export async function GET(request:Request){const auth=await requireApiUser(request);if("response"in auth)return auth.response;return Response.json({categories:await listCategories()})}
+export async function POST(request:Request){const auth=await requireApiUser(request);if("response"in auth)return auth.response;const p=await request.json() as Record<string,unknown>;const name=sanitizePlain(p.name,80);const slug=slugify(sanitizePlain(p.slug||name,100));if(!name||!slug)return Response.json({error:"Name and slug are required."},{status:400});await saveTaxonomy("categories",{name,slug,description:sanitizePlain(p.description,300),color:/^#[0-9a-f]{6}$/i.test(String(p.color))?String(p.color):"#f06f5f"});return Response.json({categories:await listCategories()})}
+export async function DELETE(request:Request){const auth=await requireApiUser(request);if("response"in auth)return auth.response;const id=Number(new URL(request.url).searchParams.get("id"));try{await deleteTaxonomy("categories",id);return Response.json({categories:await listCategories()})}catch{return Response.json({error:"Category is still in use."},{status:409})}}

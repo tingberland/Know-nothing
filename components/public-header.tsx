@@ -1,0 +1,3 @@
+import Link from "next/link";
+export function PublicHeader(){return <header className="site-header page-shell"><Link className="wordmark" href="/" aria-label="Know Nothing Daily, home"><span aria-hidden="true">✦</span> Know Nothing Daily</Link><nav aria-label="Main navigation"><Link href="/#manifesto">แนวคิด</Link><Link href="/#archive">คลังความรู้</Link><Link href="/search">ค้นหา</Link><Link className="nav-pill" href="/admin">Admin ↗</Link></nav></header>}
+export function PublicFooter(){return <footer><div className="page-shell footer-inner"><Link className="wordmark" href="/"><span aria-hidden="true">✦</span> Know Nothing Daily</Link><span>ONE NEW THING · EVERY DAY</span><a href="#top">BACK TO TOP ↑</a></div></footer>}

@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import { access, readFile } from "node:fs/promises";
+import test from "node:test";
+const root=new URL("../",import.meta.url);
+const read=(path)=>readFile(new URL(path,root),"utf8");
+test("uses durable D1 and R2 bindings",async()=>{const config=JSON.parse(await read(".openai/hosting.json"));assert.equal(config.d1,"DB");assert.equal(config.r2,"MEDIA");const schema=await read("db/schema.ts");for(const table of ["users","content_items","categories","tags","media","settings","activity"])assert.match(schema,new RegExp(table))});
+test("protects every admin mutation on the server",async()=>{for(const route of ["app/api/admin/content/route.ts","app/api/admin/content/[id]/route.ts","app/api/admin/media/route.ts","app/api/admin/settings/route.ts","app/api/admin/users/route.ts"]){const source=await read(route);assert.match(source,/requireApiUser\(request\)/,route)}const auth=await read("lib/auth.ts");assert.match(auth,/ADMIN_EMAILS/);assert.match(auth,/origin/)});
+test("keeps drafts out of public queries",async()=>{const db=await read("lib/database.ts");assert.match(db,/c\.status='published'/);for(const page of ["app/articles/[slug]/page.tsx","app/notes/[slug]/page.tsx","app/films/[slug]/page.tsx","app/places/[slug]/page.tsx"])await access(new URL(page,root))});
+test("supports the full editorial lifecycle",async()=>{const route=await read("app/api/admin/content/[id]/route.ts");assert.match(route,/export async function PUT/);assert.match(route,/export async function DELETE/);const editor=await read("app/admin/admin-client.tsx");for(const label of ["Save draft","Publish","Unpublish","Preview","Upload media"])assert.match(editor,new RegExp(label,"i"))});
+test("starter preview is fully removed",async()=>{const [page,layout,pkg]=await Promise.all([read("app/page.tsx"),read("app/layout.tsx"),read("package.json")]);assert.doesNotMatch(page,/SkeletonPreview|codex-preview/);assert.doesNotMatch(layout,/Starter Project|codex-preview/);assert.doesNotMatch(pkg,/react-loading-skeleton/)});

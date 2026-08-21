@@ -1,0 +1,7 @@
+import { getChatGPTUser, type ChatGPTUser } from "@/app/chatgpt-auth";
+import { ensureDatabase, rawDb, runtimeEnv } from "./database";
+export type AuthorizedUser = ChatGPTUser & { role: "admin" | "editor" };
+function configuredAdmins(){return new Set((runtimeEnv().ADMIN_EMAILS??"").split(",").map(v=>v.trim().toLowerCase()).filter(Boolean))}
+export async function authorizeUser(user:ChatGPTUser):Promise<AuthorizedUser|null>{await ensureDatabase();const existing=await rawDb().prepare("SELECT role FROM users WHERE id=? OR lower(email)=lower(?) LIMIT 1").bind(user.userId,user.email).first<{role:"admin"|"editor"}>();if(existing)return{...user,role:existing.role};if(configuredAdmins().has(user.email.toLowerCase())){await rawDb().prepare("INSERT INTO users (id,email,name,role) VALUES (?,?,?,'admin') ON CONFLICT(email) DO UPDATE SET id=excluded.id,name=excluded.name,updated_at=CURRENT_TIMESTAMP").bind(user.userId,user.email,user.displayName).run();return{...user,role:"admin"}}return null}
+export async function getAuthorizedUser(){const user=await getChatGPTUser();return user?authorizeUser(user):null}
+export async function requireApiUser(request:Request){const user=await getAuthorizedUser();if(!user)return{response:Response.json({error:"Authentication or admin access required."},{status:401})}as const;const origin=request.headers.get("origin");if(origin&&new URL(origin).origin!==new URL(request.url).origin)return{response:Response.json({error:"Invalid request origin."},{status:403})}as const;return{user}as const}

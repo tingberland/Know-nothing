@@ -1,0 +1,32 @@
+import type { Metadata } from "next";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  metadataBase: new URL(process.env.SITE_URL ?? "https://know-nothing-daily.tingting581190.chatgpt.site"),
+  title: {
+    default: "Know Nothing Daily — รู้จักโลกเพิ่มขึ้นทุกวัน",
+    template: "%s — Know Nothing Daily",
+  },
+  description: "A personal archive of curiosity — บันทึกสิ่งใหม่ที่ได้เรียนรู้ในแต่ละวัน",
+  icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
+  openGraph: {
+    type: "website",
+    title: "Know Nothing Daily",
+    description: "A personal archive of curiosity — รู้จักโลกเพิ่มขึ้นทุกวัน",
+    images: [{ url: "/og.png", width: 1731, height: 909, alt: "Know Nothing Daily — A personal archive of curiosity" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Know Nothing Daily",
+    description: "A personal archive of curiosity — รู้จักโลกเพิ่มขึ้นทุกวัน",
+    images: ["/og.png"],
+  },
+};
+
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <html lang="th">
+      <body>{children}</body>
+    </html>
+  );
+}
