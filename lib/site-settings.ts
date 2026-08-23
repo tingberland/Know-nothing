@@ -8,6 +8,7 @@ export type SocialLink = {
   placement: "header" | "footer" | "both";
 };
 export type CoreSectionId = "hero" | "manifesto" | "archive";
+export type BackgroundSlot = { mediaId: number | null; position: "center" | "top" | "bottom"; overlay: number };
 export type CustomSection = {
   id: string;
   enabled: boolean;
@@ -32,6 +33,7 @@ export type SiteDesign = {
   };
   sectionOrder: string[];
   visibility: Record<CoreSectionId, boolean>;
+  backgrounds: Record<CoreSectionId, BackgroundSlot>;
   hero: {
     eyebrow: string;
     titleBefore: string;
@@ -80,6 +82,11 @@ export const defaultSiteDesign: SiteDesign = {
   },
   sectionOrder: ["hero", "manifesto", "archive"],
   visibility: { hero: true, manifesto: true, archive: true },
+  backgrounds: {
+    hero: { mediaId: null, position: "center", overlay: 18 },
+    manifesto: { mediaId: null, position: "center", overlay: 42 },
+    archive: { mediaId: null, position: "center", overlay: 18 },
+  },
   hero: {
     eyebrow: "A PERSONAL ARCHIVE OF CURIOSITY · EST. 2026",
     titleBefore: "รู้จักโลก", titleAccent: "เพิ่มขึ้น", titleAfter: "ทุกวัน",
@@ -124,6 +131,15 @@ const fontAsset = (value: unknown): FontAsset | null => {
   const format = choice(raw.format, ["woff", "woff2"] as const, url.toLowerCase().endsWith(".woff2") ? "woff2" : "woff");
   return { name: text(raw.name, "Custom brand font", 120), url, format };
 };
+const backgroundSlot = (value: unknown, fallback: BackgroundSlot): BackgroundSlot => {
+  const raw = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  const overlay = Number(raw.overlay);
+  return {
+    mediaId: id(raw.mediaId),
+    position: choice(raw.position, ["center", "top", "bottom"] as const, fallback.position),
+    overlay: Number.isFinite(overlay) ? Math.max(0, Math.min(80, overlay)) : fallback.overlay,
+  };
+};
 
 export function normalizeSiteSettings(value: unknown): SiteSettings {
   const raw = value && typeof value === "object" ? value as Record<string, unknown> : {};
@@ -133,6 +149,7 @@ export function normalizeSiteSettings(value: unknown): SiteSettings {
   const manifestoRaw = designRaw.manifesto && typeof designRaw.manifesto === "object" ? designRaw.manifesto as Record<string, unknown> : {};
   const archiveRaw = designRaw.archive && typeof designRaw.archive === "object" ? designRaw.archive as Record<string, unknown> : {};
   const visibilityRaw = designRaw.visibility && typeof designRaw.visibility === "object" ? designRaw.visibility as Record<string, unknown> : {};
+  const backgroundsRaw = designRaw.backgrounds && typeof designRaw.backgrounds === "object" ? designRaw.backgrounds as Record<string, unknown> : {};
   const customSections = Array.isArray(designRaw.customSections) ? designRaw.customSections.slice(0, 8).map((section, index) => {
     const item = section && typeof section === "object" ? section as Record<string, unknown> : {};
     return {
@@ -169,6 +186,11 @@ export function normalizeSiteSettings(value: unknown): SiteSettings {
         corners: choice(themeRaw.corners, ["sharp", "soft"] as const, "sharp"),
       },
       sectionOrder, visibility: { hero: visibilityRaw.hero !== false, manifesto: visibilityRaw.manifesto !== false, archive: visibilityRaw.archive !== false },
+      backgrounds: {
+        hero: backgroundSlot(backgroundsRaw.hero, defaultSiteDesign.backgrounds.hero),
+        manifesto: backgroundSlot(backgroundsRaw.manifesto, defaultSiteDesign.backgrounds.manifesto),
+        archive: backgroundSlot(backgroundsRaw.archive, defaultSiteDesign.backgrounds.archive),
+      },
       hero: {
         eyebrow: text(heroRaw.eyebrow, defaultSiteDesign.hero.eyebrow, 140), titleBefore: text(heroRaw.titleBefore, defaultSiteDesign.hero.titleBefore, 100),
         titleAccent: text(heroRaw.titleAccent, defaultSiteDesign.hero.titleAccent, 100), titleAfter: text(heroRaw.titleAfter, defaultSiteDesign.hero.titleAfter, 100),
