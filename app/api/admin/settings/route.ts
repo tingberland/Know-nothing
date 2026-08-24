@@ -1,5 +1,12 @@
 import { getSettings, saveSetting } from "@/lib/database";
 import { requireApiUser } from "@/lib/auth";
 import { sanitizePlain } from "@/lib/validation";
+import { normalizeSiteSettings } from "@/lib/site-settings";
 export async function GET(request:Request){const auth=await requireApiUser(request);if("response"in auth)return auth.response;return Response.json({settings:await getSettings()})}
-export async function PUT(request:Request){const auth=await requireApiUser(request);if("response"in auth)return auth.response;if(auth.user.role!=="admin")return Response.json({error:"Admin role required."},{status:403});const p=await request.json() as Record<string,unknown>;const site={name:sanitizePlain(p.name,100),description:sanitizePlain(p.description,300),footer:sanitizePlain(p.footer,200),logoMediaId:Number(p.logoMediaId)||null,faviconMediaId:Number(p.faviconMediaId)||null,socialImageMediaId:Number(p.socialImageMediaId)||null,analytics:sanitizePlain(p.analytics,500),socialLinks:Array.isArray(p.socialLinks)?p.socialLinks.slice(0,20):[],navigation:Array.isArray(p.navigation)?p.navigation.slice(0,20):[]};await saveSetting("site",site,auth.user.userId);return Response.json({settings:await getSettings()})}
+export async function PUT(request:Request){
+  const auth=await requireApiUser(request);if("response"in auth)return auth.response;if(auth.user.role!=="admin")return Response.json({error:"Admin role required."},{status:403});
+  const p=await request.json() as Record<string,unknown>;const current=await getSettings();const previous=normalizeSiteSettings(current.site);const merged:Record<string,unknown>={...previous};
+  for(const key of ["name","description","footer","logoMediaId","faviconMediaId","socialImageMediaId","analytics","socialLinks","navigation","design"])if(key in p)merged[key]=p[key];
+  const site=normalizeSiteSettings(merged);site.name=sanitizePlain(site.name,100);site.description=sanitizePlain(site.description,300);site.footer=sanitizePlain(site.footer,200);site.analytics=sanitizePlain(site.analytics,500);
+  await saveSetting("site",site,auth.user.userId);return Response.json({settings:await getSettings()});
+}
