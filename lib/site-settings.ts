@@ -9,6 +9,18 @@ export type SocialLink = {
 };
 export type CoreSectionId = "hero" | "manifesto" | "archive";
 export type BackgroundSlot = { mediaId: number | null; position: "center" | "top" | "bottom"; overlay: number };
+export type TextStyle = "normal" | "italic" | "uppercase";
+export type TextFont = "theme" | "editorial" | "modern" | "humanist";
+export type SectionTypography = {
+  titleSize: number;
+  bodySize: number;
+  titleColor: string;
+  bodyColor: string;
+  titleStyle: TextStyle;
+  titleFont: TextFont;
+  bodyFont: "theme" | "serif" | "sans" | "humanist";
+};
+export type ContentTypography = SectionTypography;
 export type CustomSection = {
   id: string;
   enabled: boolean;
@@ -34,6 +46,10 @@ export type SiteDesign = {
   sectionOrder: string[];
   visibility: Record<CoreSectionId, boolean>;
   backgrounds: Record<CoreSectionId, BackgroundSlot>;
+  typography: {
+    sections: Record<CoreSectionId, SectionTypography>;
+    content: ContentTypography;
+  };
   hero: {
     eyebrow: string;
     titleBefore: string;
@@ -87,6 +103,14 @@ export const defaultSiteDesign: SiteDesign = {
     manifesto: { mediaId: null, position: "center", overlay: 42 },
     archive: { mediaId: null, position: "center", overlay: 18 },
   },
+  typography: {
+    sections: {
+      hero: { titleSize: 100, bodySize: 100, titleColor: "", bodyColor: "", titleStyle: "normal", titleFont: "theme", bodyFont: "theme" },
+      manifesto: { titleSize: 100, bodySize: 100, titleColor: "", bodyColor: "", titleStyle: "normal", titleFont: "theme", bodyFont: "theme" },
+      archive: { titleSize: 100, bodySize: 100, titleColor: "", bodyColor: "", titleStyle: "normal", titleFont: "theme", bodyFont: "theme" },
+    },
+    content: { titleSize: 100, bodySize: 100, titleColor: "", bodyColor: "", titleStyle: "normal", titleFont: "theme", bodyFont: "theme" },
+  },
   hero: {
     eyebrow: "A PERSONAL ARCHIVE OF CURIOSITY · EST. 2026",
     titleBefore: "รู้จักโลก", titleAccent: "เพิ่มขึ้น", titleAfter: "ทุกวัน",
@@ -121,6 +145,7 @@ const text = (value: unknown, fallback: string, max = 1200) => {
   return cleaned || fallback;
 };
 const hex = (value: unknown, fallback: string) => /^#[0-9a-f]{6}$/i.test(String(value)) ? String(value) : fallback;
+const optionalHex = (value: unknown) => /^#[0-9a-f]{6}$/i.test(String(value)) ? String(value) : "";
 const id = (value: unknown) => { const n = Number(value); return Number.isInteger(n) && n > 0 ? n : null; };
 const choice = <T extends string>(value: unknown, options: readonly T[], fallback: T) => options.includes(value as T) ? value as T : fallback;
 const externalUrl = (value: unknown) => { try { const url = new URL(String(value)); return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : ""; } catch { return ""; } };
@@ -140,6 +165,20 @@ const backgroundSlot = (value: unknown, fallback: BackgroundSlot): BackgroundSlo
     overlay: Number.isFinite(overlay) ? Math.max(0, Math.min(80, overlay)) : fallback.overlay,
   };
 };
+const scale = (value: unknown, fallback: number, min: number, max: number) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.round(Math.max(min, Math.min(max, number))) : fallback;
+};
+const sectionTypography = (value: unknown, fallback: SectionTypography): SectionTypography => {
+  const raw = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  return {
+    titleSize: scale(raw.titleSize, fallback.titleSize, 70, 160), bodySize: scale(raw.bodySize, fallback.bodySize, 75, 150),
+    titleColor: optionalHex(raw.titleColor), bodyColor: optionalHex(raw.bodyColor),
+    titleStyle: choice(raw.titleStyle, ["normal", "italic", "uppercase"] as const, fallback.titleStyle),
+    titleFont: choice(raw.titleFont, ["theme", "editorial", "modern", "humanist"] as const, fallback.titleFont),
+    bodyFont: choice(raw.bodyFont, ["theme", "serif", "sans", "humanist"] as const, fallback.bodyFont),
+  };
+};
 
 export function normalizeSiteSettings(value: unknown): SiteSettings {
   const raw = value && typeof value === "object" ? value as Record<string, unknown> : {};
@@ -150,6 +189,8 @@ export function normalizeSiteSettings(value: unknown): SiteSettings {
   const archiveRaw = designRaw.archive && typeof designRaw.archive === "object" ? designRaw.archive as Record<string, unknown> : {};
   const visibilityRaw = designRaw.visibility && typeof designRaw.visibility === "object" ? designRaw.visibility as Record<string, unknown> : {};
   const backgroundsRaw = designRaw.backgrounds && typeof designRaw.backgrounds === "object" ? designRaw.backgrounds as Record<string, unknown> : {};
+  const typographyRaw = designRaw.typography && typeof designRaw.typography === "object" ? designRaw.typography as Record<string, unknown> : {};
+  const sectionTypographyRaw = typographyRaw.sections && typeof typographyRaw.sections === "object" ? typographyRaw.sections as Record<string, unknown> : {};
   const customSections = Array.isArray(designRaw.customSections) ? designRaw.customSections.slice(0, 8).map((section, index) => {
     const item = section && typeof section === "object" ? section as Record<string, unknown> : {};
     return {
@@ -191,6 +232,14 @@ export function normalizeSiteSettings(value: unknown): SiteSettings {
         manifesto: backgroundSlot(backgroundsRaw.manifesto, defaultSiteDesign.backgrounds.manifesto),
         archive: backgroundSlot(backgroundsRaw.archive, defaultSiteDesign.backgrounds.archive),
       },
+      typography: {
+        sections: {
+          hero: sectionTypography(sectionTypographyRaw.hero, defaultSiteDesign.typography.sections.hero),
+          manifesto: sectionTypography(sectionTypographyRaw.manifesto, defaultSiteDesign.typography.sections.manifesto),
+          archive: sectionTypography(sectionTypographyRaw.archive, defaultSiteDesign.typography.sections.archive),
+        },
+        content: sectionTypography(typographyRaw.content, defaultSiteDesign.typography.content),
+      },
       hero: {
         eyebrow: text(heroRaw.eyebrow, defaultSiteDesign.hero.eyebrow, 140), titleBefore: text(heroRaw.titleBefore, defaultSiteDesign.hero.titleBefore, 100),
         titleAccent: text(heroRaw.titleAccent, defaultSiteDesign.hero.titleAccent, 100), titleAfter: text(heroRaw.titleAfter, defaultSiteDesign.hero.titleAfter, 100),
@@ -223,6 +272,29 @@ export function siteThemeStyle(settings: SiteSettings) {
     "--section-space": settings.design.theme.density === "compact" ? "70px" : settings.design.theme.density === "balanced" ? "90px" : "110px",
     "--corner": settings.design.theme.corners === "soft" ? "18px" : "0px",
   } as CSSProperties;
+}
+
+const typographyFonts = {
+  editorial: 'Georgia, "Times New Roman", serif', modern: 'Arial, Helvetica, sans-serif', humanist: '"Trebuchet MS", Arial, sans-serif',
+};
+const typographyVariables = (value: SectionTypography, prefix: "section" | "content") => ({
+  [`--${prefix}-title-scale`]: String(value.titleSize / 100),
+  [`--${prefix}-body-scale`]: String(value.bodySize / 100),
+  [`--${prefix}-title-font`]: value.titleFont === "theme" ? "var(--font-heading)" : typographyFonts[value.titleFont],
+  [`--${prefix}-body-font`]: value.bodyFont === "theme" ? "var(--font-body)" : value.bodyFont === "serif" ? typographyFonts.editorial : value.bodyFont === "humanist" ? typographyFonts.humanist : typographyFonts.modern,
+  [`--${prefix}-title-style`]: value.titleStyle === "italic" ? "italic" : "normal",
+  [`--${prefix}-title-transform`]: value.titleStyle === "uppercase" ? "uppercase" : "none",
+  ...(value.titleColor ? { [`--${prefix}-title-color`]: value.titleColor } : {}),
+  ...(value.bodyColor ? { [`--${prefix}-body-color`]: value.bodyColor } : {}),
+});
+
+export function sectionTypographyStyle(settings: SiteSettings, section: CoreSectionId) {
+  return typographyVariables(settings.design.typography.sections[section], "section") as CSSProperties;
+}
+
+export function contentTypographyStyle(settings: SiteSettings) {
+  const value = settings.design.typography.content;
+  return typographyVariables(value, "content") as CSSProperties;
 }
 
 export function siteFontFaceCss(settings: SiteSettings) {
